@@ -51,9 +51,7 @@ jobs:
       - run:
           name: npm run build
           working_directory: ./backend
-          command: |
-            npm start
-            npm run build
+          command: npm run build
       - persist_to_workspace:
           root: .
           paths:
