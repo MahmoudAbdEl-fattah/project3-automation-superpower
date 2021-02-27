@@ -32,19 +32,17 @@ jobs:
       - checkout
       - restore_cache:
           keys: [backend-build]
+      - aws-cli/setup:
+          profile-name: ASAWS
       - run:
           name: Back-end build
           command: |
             cd backend
-            npm i
+            npm install
             npm run build
       - save_cache:
           paths: [backend/node_modules]
-          key: backend-build  # -<< pipeline.id >>
-      - save_cache:
-          paths: [backend/dist]
-          key: backend-dist  # -<< pipeline.id >>
-
+          key: backend-build
 workflows:
   myworkflow:
     jobs:
