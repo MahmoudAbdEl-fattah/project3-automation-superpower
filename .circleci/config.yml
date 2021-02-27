@@ -38,9 +38,7 @@ jobs:
       - save_cache:
           paths: [backend/node_modules]
           key: backend-build  # -<< pipeline.id >>
-      - save_cache:
-          paths: [backend/dist]
-          key: backend-dist  # -<< pipeline.id >>
+
 workflows:
   myworkflow:
     jobs:
