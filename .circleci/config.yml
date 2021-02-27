@@ -18,7 +18,6 @@ jobs:
           command: |
             cd frontend
             npm cache clean --force
-            rm -rf node_modules
             npm install webpack-dev-server -g
             npm install
             npm run build
