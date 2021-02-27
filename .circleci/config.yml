@@ -17,8 +17,6 @@ jobs:
           name: Build front-end
           command: |
             cd frontend
-            npm cache clean --force
-            npm install webpack-dev-server -g
             npm install
             npm run build
       - save_cache:
@@ -32,8 +30,6 @@ jobs:
       - checkout
       - restore_cache:
           keys: [backend-build]
-      - aws-cli/setup:
-          profile-name: ASAWS
       - run:
           name: Back-end build
           command: |
