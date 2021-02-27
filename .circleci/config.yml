@@ -1,46 +1,84 @@
 version: 2.1
-orbs:
-  slack: circleci/slack@4.1.1
-  aws-cli: circleci/aws-cli@1.3.0
+
+executors:
+  node:
+    docker:
+      - image: circleci/node:13.8.0
+  python:
+    docker:
+      - image: python:3.9.0-alpine
+  aws:
+    docker:
+      - image: amazon/aws-cli
 
             
 jobs:
-  build-frontend:
-    docker:
-      - image: circleci/node:13.8.0
+
+  install-backend-dependencies:
+    executor: node
     steps:
       - checkout
-      - restore_cache:
-          keys: [frontend-build]
       - run:
-          name: Build front-end
-          command: |
-            cd frontend
-            npm install
-            npm run build
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build  # -<< pipeline.id >>
+          name: npm install
+          working_directory: ./backend
+          command: ls -la && npm install
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/node_modules
+
+
+  install-frontend-dependencies:
+   executor: node
+   steps:
+      - checkout
+      - run:
+          name: npm install
+          working_directory: ./frontend
+          command: ls -la && npm install
+      - persist_to_workspace:
+          root: .
+          paths:
+            - frontend/node_modules
+
 
   build-backend:
-    docker:
-      - image: circleci/node:13.8.0
+    executor: node
     steps:
       - checkout
-      - restore_cache:
-          keys: [backend-build]
+      - attach_workspace:
+          at: .
       - run:
-          name: Back-end build
-          command: |
-            cd backend
-            npm install
-            npm run build
-      - save_cache:
-          paths: [backend/node_modules]
-          key: backend-build  # -<< pipeline.id >>
+          name: npm run build
+          working_directory: ./backend
+          command: npm run build
+      - persist_to_workspace:
+          root: .
+          paths:
+            - backend/dist
+
+
+  build-frontend:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: npm run build
+          working_directory: ./frontend
+          command: npm run build
 
 workflows:
-  myworkflow:
+  default:
     jobs:
-      - build-frontend
-      - build-backend
+      ## BUILD AND DEPLOY
+      - install-backend-dependencies
+      - install-frontend-dependencies
+
+      - build-backend:
+          requires:
+            - install-backend-dependencies
+      - build-frontend:
+          requires:
+            - install-frontend-dependencies
