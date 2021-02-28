@@ -1,4 +1,5 @@
 version: 2.1
+
 orbs:
   slack: circleci/slack@4.1.1
   aws-cli: circleci/aws-cli@1.3.0
@@ -59,7 +60,6 @@ jobs:
           paths:
             - backend/dist
 
-
   build-frontend:
     executor: node
     steps:
@@ -70,6 +70,37 @@ jobs:
           name: npm run build
           working_directory: ./frontend
           command: npm run build
+          
+  test-frontend:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Font-end test
+          command: |
+            cd frontend
+            npm run test
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+                
+  test-backend:
+    executor: node
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - run:
+          name: Back-end test
+          command: |
+            cd backend
+            npm run test
+      - slack/notify:
+          event: fail
+          template: basic_fail_1      
+          
 workflows:
   default:
     jobs:
@@ -83,3 +114,9 @@ workflows:
       - build-frontend:
           requires:
             - install-frontend-dependencies
+      - test-backend:
+          requires:
+            - build-backend
+      - test-frontend:
+          requires:
+            -  build-frontend            
