@@ -4,7 +4,7 @@ orbs:
   slack: circleci/slack@4.1.1
   aws-cli: circleci/aws-cli@1.3.0
 
-images:
+executors:
   node:
     docker:
       - image: circleci/node:13.8.0
@@ -19,7 +19,7 @@ images:
 jobs:
 
   build-frontend:
-    images: node
+    executor: node
     steps:
       - checkout
       - restore_cache:
@@ -39,7 +39,7 @@ jobs:
           template: basic_fail_1
 
   build-backend:
-    images: node
+    executor: node
     steps:
       - checkout
       - restore_cache:
@@ -61,7 +61,7 @@ jobs:
           template: basic_fail_1
 
   test-frontend:
-    images: node
+    executor: node
     steps:
       - checkout
       - restore_cache:
@@ -76,7 +76,7 @@ jobs:
           template: basic_fail_1
                 
   test-backend:
-    images: node
+    executor: node
     steps:
       - checkout
       - restore_cache:
