@@ -4,7 +4,7 @@ orbs:
   slack: circleci/slack@4.1.1
   aws-cli: circleci/aws-cli@1.3.0
 
-executors:
+images:
   node:
     docker:
       - image: circleci/node:13.8.0
@@ -18,65 +18,54 @@ executors:
             
 jobs:
 
-  install-backend-dependencies:
-    executor: node
-    steps:
-      - checkout
-      - run:
-          name: npm install
-          working_directory: ./backend
-          command: ls -la && npm install
-      - persist_to_workspace:
-          root: .
-          paths:
-            - backend/node_modules
-
-
-  install-frontend-dependencies:
-   executor: node
-   steps:
-      - checkout
-      - run:
-          name: npm install
-          working_directory: ./frontend
-          command: ls -la && npm install
-      - persist_to_workspace:
-          root: .
-          paths:
-            - frontend/node_modules
-  
-  build-backend:
-    executor: node
-    steps:
-      - checkout
-      - attach_workspace:
-          at: .
-      - run:
-          name: npm run build
-          working_directory: ./backend
-          command: npm run build
-      - persist_to_workspace:
-          root: .
-          paths:
-            - backend/dist
-
   build-frontend:
-    executor: node
+    image: node
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - restore_cache:
+          keys: [frontend-build]
       - run:
-          name: npm run build
-          working_directory: ./frontend
-          command: npm run build
-          
-  test-frontend:
-    executor: node
+          name: Build front-end
+          command: |
+            cd frontend
+            sudo npm install webpack-dev-server -g
+            sudo npm install
+            sudo npm run build
+      - save_cache:
+          paths: [frontend/node_modules]
+          key: frontend-build  # -<< pipeline.id >>
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+
+  build-backend:
+    image: node
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - restore_cache:
+          keys: [backend-build]
+      - run:
+          name: Back-end build
+          command: |
+            cd backend
+            npm i
+            npm run build
+      - save_cache:
+          paths: [backend/node_modules]
+          key: backend-build  # -<< pipeline.id >>
+      - save_cache:
+          paths: [backend/dist]
+          key: backend-dist  # -<< pipeline.id >>
+      - slack/notify:
+          event: fail
+          template: basic_fail_1
+
+  test-frontend:
+    image: node
+    steps:
+      - checkout
+      - restore_cache:
+          keys: ["frontend-build"]  # -<< pipeline.id >>"
       - run:
           name: Font-end test
           command: |
@@ -87,11 +76,11 @@ jobs:
           template: basic_fail_1
                 
   test-backend:
-    executor: node
+    image: node
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      - restore_cache:
+          keys: ["backend-build"]  # -<< pipeline.id >>"
       - run:
           name: Back-end test
           command: |
@@ -99,24 +88,14 @@ jobs:
             npm run test
       - slack/notify:
           event: fail
-          template: basic_fail_1      
+          template: basic_fail_1
           
 workflows:
   default:
     jobs:
-      ## BUILD AND DEPLOY
-      - install-backend-dependencies
-      - install-frontend-dependencies
-
-      - build-backend:
-          requires:
-            - install-backend-dependencies
-      - build-frontend:
-          requires:
-            - install-frontend-dependencies
-      - test-backend:
-          requires:
-            - build-backend
+      - build-frontend
+      - build-backend
       - test-frontend:
-          requires:
-            -  build-frontend            
+          requires: [build-frontend]
+      - test-backend:
+          requires: [build-backend]        
