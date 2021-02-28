@@ -19,7 +19,7 @@ images:
 jobs:
 
   build-frontend:
-    image: node
+    images: node
     steps:
       - checkout
       - restore_cache:
@@ -39,7 +39,7 @@ jobs:
           template: basic_fail_1
 
   build-backend:
-    image: node
+    images: node
     steps:
       - checkout
       - restore_cache:
@@ -61,7 +61,7 @@ jobs:
           template: basic_fail_1
 
   test-frontend:
-    image: node
+    images: node
     steps:
       - checkout
       - restore_cache:
@@ -76,7 +76,7 @@ jobs:
           template: basic_fail_1
                 
   test-backend:
-    image: node
+    images: node
     steps:
       - checkout
       - restore_cache:
