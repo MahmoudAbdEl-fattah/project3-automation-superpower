@@ -29,11 +29,7 @@ async function bootstrap() {
     .addTag('customTag')
     .setBasePath(apiVersionPrefix)
     .addBearerAuth() // here is an intentional compile error. Remove the "x" and the backend should compile.
-<<<<<<< HEAD
-    .build()
-=======
     .build();
->>>>>>> 8a6dbdc65de1d947e631d52953a68f1c9f882742
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup(`api/${apiVersionPrefix}`, app, document);
   const config: ConfigService = app.get('ConfigService');
