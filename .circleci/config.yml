@@ -31,7 +31,6 @@ jobs:
           paths: [frontend/node_modules11]
           key: frontendCache  # -<< pipeline.id >>
 
-
   build-backend:
     executor: node
     steps:
