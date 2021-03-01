@@ -19,7 +19,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: [frontendCache]
       - run:
           name: Build front-end
           command: |
@@ -28,8 +28,8 @@ jobs:
             sudo npm install
             sudo npm run build
       - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build  # -<< pipeline.id >>
+          paths: [frontend/node_modules11]
+          key: frontendCache  # -<< pipeline.id >>
 
 
   build-backend:
@@ -45,7 +45,7 @@ jobs:
             npm i
             npm run build
       - save_cache:
-          paths: [backend/node_modules]
+          paths: [backend/node_modules11]
           key: backend-build  # -<< pipeline.id >>
       - save_cache:
           paths: [backend/dist]
@@ -57,7 +57,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["frontend-build"]  # -<< pipeline.id >>"
+          keys: ["frontendCach"]  # -<< pipeline.id >>"
       - run:
           name: Font-end test
           command: |
