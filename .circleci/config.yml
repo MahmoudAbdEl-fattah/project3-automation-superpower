@@ -19,7 +19,8 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontend-build]
+          keys: 
+            - frontend-build-${CIRCLE_WORKFLOW_ID}
       - run:
           name: Build front-end
           command: |
@@ -28,28 +29,31 @@ jobs:
             sudo npm install
             sudo npm run build
       - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build  # -<< pipeline.id >>
-
+          paths:
+            - frontend/node_modules
+            - frontend/dist          
+          key: 
+            - frontend-build-${CIRCLE_WORKFLOW_ID}
 
   build-backend:
     executor: node
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys: 
+            - backend-build-${CIRCLE_WORKFLOW_ID}         
       - run:
           name: Back-end build
           command: |
             cd backend
-            npm i
+            rm -rf node_modules/
+            npm install
             npm run build
       - save_cache:
-          paths: [backend/node_modules]
-          key: backend-build  # -<< pipeline.id >>
-      - save_cache:
-          paths: [backend/dist]
-          key: backend-dist  # -<< pipeline.id >>
+          paths: 
+            - backend/node_modules
+            - backend/dist
+          key: backend-build-${CIRCLE_WORKFLOW_ID}
 
 
   test-frontend:
@@ -57,7 +61,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["frontend-build"]  # -<< pipeline.id >>"
+          keys: frontend-build-${CIRCLE_WORKFLOW_ID}
       - run:
           name: Font-end test
           command: |
@@ -70,7 +74,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["backend-build"]  # -<< pipeline.id >>"
+          keys: backend-build-${CIRCLE_WORKFLOW_ID}
       - run:
           name: Back-end test
           command: |
