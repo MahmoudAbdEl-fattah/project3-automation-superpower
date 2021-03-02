@@ -57,7 +57,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["frontendCach"]  # -<< pipeline.id >>"
+          keys: ["frontendCache"]  # -<< pipeline.id >>"
       - run:
           name: Font-end test
           command: |
