@@ -30,7 +30,7 @@ jobs:
             sudo npm run build
       - save_cache:
           paths: [frontend/node_modules]
-          key: frontendCache  # -<< pipeline.id >>
+          key: v2-frontendCache  # -<< pipeline.id >>
 
   build-backend:
     executor: node
@@ -57,7 +57,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["frontendCache"]  # -<< pipeline.id >>"
+          keys: ["v2-frontendCache"]  # -<< pipeline.id >>"
       - run:
           name: Font-end test
           command: |
