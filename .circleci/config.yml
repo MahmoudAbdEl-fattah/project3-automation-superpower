@@ -80,17 +80,16 @@ jobs:
     executor: node
     steps:
       - checkout
-      - rstore-cache: 
+      - restore_cache:
           keys: ["v2-frontendCache"]  # -<< pipeline.id >>"
-      run:
-        name: scan frontend
-        command: |
-          cd frontend
-          npm audit --audit-level=critical
+      - run:
+          name: scan frontend
+          command: |
+            cd frontend
+            npm audit --audit-level=critical
           
   scan-backend:
-    docker:
-      - image: circleci/node:13.8.0
+    executor: node
     steps:
       - checkout
       - restore_cache:
