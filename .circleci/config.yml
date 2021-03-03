@@ -20,7 +20,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [frontendCache]
+          keys: [v3-frontendCache]
       - run:
           name: Build front-end
           command: |
@@ -29,8 +29,8 @@ jobs:
             sudo npm install
             sudo npm run build
       - save_cache:
-          paths: [frontend/node_modules11]
-          key: frontendCache  # -<< pipeline.id >>
+          paths: [frontend/node_modules]
+          key: v2-frontendCache  # -<< pipeline.id >>
 
   build-backend:
     executor: node
@@ -57,7 +57,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["frontendCach"]  # -<< pipeline.id >>"
+          keys: ["v2-frontendCache"]  # -<< pipeline.id >>"
       - run:
           name: Font-end test
           command: |
@@ -75,6 +75,32 @@ jobs:
           command: |
             cd backend
             npm run test
+            
+  scan-frontend:
+    executor: node
+    steps:
+      - checkout
+      - restore_cache:
+          keys: ["v2-frontendCache"]  # -<< pipeline.id >>"
+      - run:
+          name: scan frontend
+          command: |
+            cd frontend
+            npm audit --audit-level=critical
+          
+  scan-backend:
+    executor: node
+    steps:
+      - checkout
+      - restore_cache:
+          keys: ["backend-build"]  # -<< pipeline.id >>"
+      - run:
+          name: Back-end security scan
+          command: |
+            cd backend
+            npm audit --audit-level=critical          
+        
+     
           
 workflows:
   default:
@@ -84,4 +110,8 @@ workflows:
       - test-frontend:
           requires: [build-frontend]
       - test-backend:
-          requires: [build-backend]    
+          requires: [build-backend] 
+      - scan-frontend:
+          requires: [build-frontend]
+      - scan-backend:
+          requires: [build-backend]          
