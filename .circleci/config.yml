@@ -20,7 +20,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [v3-frontendCache]
+          keys: [v2-frontendCache]
       - run:
           name: Build front-end
           command: |
