@@ -37,7 +37,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [backend-build]
+          keys: [v2-backend-build]
       - run:
           name: Back-end build
           command: |
@@ -46,7 +46,7 @@ jobs:
             npm run build
       - save_cache:
           paths: [backend/node_modules11]
-          key: backend-build  # -<< pipeline.id >>
+          key: v2-backend-build  # -<< pipeline.id >>
       - save_cache:
           paths: [backend/dist]
           key: backend-dist  # -<< pipeline.id >>
@@ -93,7 +93,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["backend-build"]  # -<< pipeline.id >>"
+          keys: ["v2-backend-build"]  # -<< pipeline.id >>"
       - run:
           name: Back-end security scan
           command: |
