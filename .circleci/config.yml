@@ -133,10 +133,13 @@ workflows:
       - build-frontend
       - build-backend
       - test-frontend:
+          context: circleci-pro3
           requires: [build-frontend]
       - test-backend:
+          context: circleci-pro3      
           requires: [build-backend] 
       - scan-frontend:
+          context: circleci-pro3      
           requires: [build-frontend]
       - scan-backend:
           requires: [build-backend]          
