@@ -4,7 +4,9 @@ version: 2.1
 orbs:
   slack: circleci/slack@4.1.1
   aws-cli: circleci/aws-cli@1.3.0
-  
+orbs:
+  node: 'circleci/node:4.1'
+  slack: circleci/slack@4.1  
 executors:
   node:
     docker:
@@ -36,9 +38,9 @@ jobs:
           paths: [frontend/node_modules]
           key: v2-frontendCache  # -<< pipeline.id >>
       - slack/notify:
+          channel: #devops-project-3-autumation-super-power
           event: fail
-          template: basic_fail_1          
-
+          template: basic_fail_1
   build-backend:
     executor: node
     steps:
@@ -57,9 +59,6 @@ jobs:
       - save_cache:
           paths: [backend/dist]
           key: backend-dist  # -<< pipeline.id >>
-      - slack/notify:
-          event: fail
-          template: basic_fail_1
 
   test-frontend:
     executor: node
@@ -72,10 +71,7 @@ jobs:
           command: |
             cd frontend
             npm run test
-      - slack/notify:
-          event: fail
-          template: basic_fail_1 
- 
+
   test-backend:
     executor: node
     steps:
@@ -87,9 +83,7 @@ jobs:
           command: |
             cd backend
             npm run test
-      - slack/notify:
-          event: fail
-          template: basic_fail_1            
+       
             
   scan-frontend:
     executor: node
@@ -102,12 +96,7 @@ jobs:
           command: |
             cd frontend
             npm audit --audit-level=critical
-      - slack/notify:
-          event: fail
-          template: basic_fail_1            
-      - slack/notify:
-          event: pass
-          template: success_tagged_deploy_1          
+ 
   scan-backend:
     executor: node
     steps:
@@ -120,26 +109,19 @@ jobs:
             cd backend
             npm install
             npm audit --audit-level=critical          
-      - slack/notify:
-          event: fail
-          template: basic_fail_1        
-      - slack/notify:
-          event: pass
-          template: success_tagged_deploy_1     
+  
           
 workflows:
   default:
     jobs:
       - build-frontend
+          context: circleci-pro3      
       - build-backend
       - test-frontend:
-          context: circleci-pro3
           requires: [build-frontend]
       - test-backend:
-          context: circleci-pro3      
           requires: [build-backend] 
       - scan-frontend:
-          context: circleci-pro3      
           requires: [build-frontend]
       - scan-backend:
           requires: [build-backend]          
