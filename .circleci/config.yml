@@ -15,7 +15,13 @@ executors:
   aws:
     docker:
       - image: amazon/aws-cli
-
+      
+commands:
+  send_slack_messages_on_fail:
+    steps:
+      - slack/status:
+          fail_only: true
+          failure_message: ':red_circle: $CIRCLE_JOB job has failed! Visit here: $CIRCLE_BUILD_URL'
             
 jobs:
 
@@ -35,10 +41,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: v2-frontendCache  # -<< pipeline.id >>
-      - slack/notify:
-          channel: #devops-project-3-autumation-super-power
-          event: fail
-          template: basic_fail_1
+
   build-backend:
     executor: node
     steps:
