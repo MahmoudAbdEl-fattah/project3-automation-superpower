@@ -112,8 +112,7 @@ jobs:
 workflows:
   default:
     jobs:
-      - build-frontend  
-          context: circleci-pro3     
+      - build-frontend      
       - build-backend
       - test-frontend:
           requires: [build-frontend]
