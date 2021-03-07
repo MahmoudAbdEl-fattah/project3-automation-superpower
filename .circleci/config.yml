@@ -117,9 +117,17 @@ workflows:
       - build-backend: *slack-fail-post-step
       - test-frontend:
           requires: [build-frontend]
+          post-steps:
+            - slack/status          
       - test-backend:
           requires: [build-backend] 
+          post-steps:
+            - slack/status               
       - scan-frontend:
           requires: [build-frontend]
+          post-steps:
+            - slack/status               
       - scan-backend:
           requires: [build-backend]          
+          post-steps:
+            - slack/status     
