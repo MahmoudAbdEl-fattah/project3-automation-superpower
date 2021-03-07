@@ -1,10 +1,6 @@
   
 version: 2.1
 
-slack-fail-post-step: &slack-fail-post-step
-  post-steps:
-    - slack/status:
-        fail_only: true
 orbs:
   slack: circleci/slack@4.1.1
   aws-cli: circleci/aws-cli@1.3.0
@@ -113,21 +109,13 @@ jobs:
 workflows:
   default:
     jobs:
-      - build-frontend: *slack-fail-post-step    
-      - build-backend: *slack-fail-post-step
+      - build-frontend   
+      - build-backend
       - test-frontend:
-          requires: [build-frontend]
-          post-steps:
-            - slack/status          
+          requires: [build-frontend]     
       - test-backend:
           requires: [build-backend] 
-          post-steps:
-            - slack/status               
       - scan-frontend:
-          requires: [build-frontend]
-          post-steps:
-            - slack/status               
+          requires: [build-frontend]          
       - scan-backend:
           requires: [build-backend]          
-          post-steps:
-            - slack/status     
