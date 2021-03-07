@@ -35,6 +35,7 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: v2-frontendCache  # -<< pipeline.id >>
+       - send_slack_messages_on_fail
 
   build-backend:
     executor: node
