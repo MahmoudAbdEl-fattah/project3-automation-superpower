@@ -1,9 +1,7 @@
   
 version: 2.1
 
-orbs:
-  slack: circleci/slack@4.1.1
-  aws-cli: circleci/aws-cli@1.3.0
+
  
 parameters:
   workflow-id:
@@ -40,7 +38,6 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: v2-frontendCache  # -<< pipeline.id >>
-       - send_slack_messages_on_fail
 
   build-backend:
     executor: node
