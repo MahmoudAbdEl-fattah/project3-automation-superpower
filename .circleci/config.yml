@@ -20,7 +20,20 @@ executors:
     docker:
       - image: amazon/aws-cli
 
-            
+commands:
+  destroy-environment:
+    description: Destroy back-end and front-end cloudformation stacks given a workflow ID.
+    steps:
+      - run:
+          name: Destroy environments
+          when: on_fail
+          command: |
+            aws s3 rm --recursive s3://proj3-<< pipeline.parameters.workflow-id >>
+            aws cloudformation delete-stack \
+              --stack-name "proj3-backend-<< pipeline.parameters.workflow-id >>"
+            aws cloudformation delete-stack \
+              --stack-name "proj3-frontend-<< pipeline.parameters.workflow-id >>"
+
 jobs:
 
   build-frontend:
@@ -143,7 +156,34 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
- 
+      - destroy_environment
+           
+
+  configure-infrastructure:
+    executor: python
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["65:fe:05:c9:b0:67:f6:01:25:aa:40:8f:ed:51:5c:ce"]
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install dependencies
+          working_directory: ./.circleci/ansible
+          command: |
+            apk add --update ansible
+            ansible --version
+            cat inventory.txt
+      - run:
+          name: Configure server
+          working_directory: ./.circleci/ansible
+          command: |
+            pwd &&
+            ls -la
+            cat inventory.txt
+            ansible-playbook -i inventory.txt configure-server.yaml        
+      - destroy_environment
+
           
 workflows:
   default:
