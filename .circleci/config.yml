@@ -158,7 +158,6 @@ jobs:
             - project/.circleci/ansible/inventory.txt
       - destroy_environment
            
-
   configure-infrastructure:
     executor: python
     steps:
@@ -204,4 +203,5 @@ workflows:
             branches:
               only: [master]
       - configure-infrastructure:
-          requires: [create-infrastructure]              
+          requires: [create-infrastructure]            
+     
