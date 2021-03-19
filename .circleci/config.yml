@@ -165,7 +165,7 @@ jobs:
           root: .
           paths:
             - .circleci/ansible/inventory.txt
-      - destroy_environment
+      #- destroy_environment
            
   configure-infrastructure:
     executor: python
@@ -190,7 +190,7 @@ jobs:
             ls -la
             cat inventory.txt
             ansible-playbook -i inventory.txt configure-server.yml        
-      - destroy_environment
+      #- destroy_environment
 
   run-migrations:
     executor: node
@@ -277,7 +277,8 @@ jobs:
           working_directory: ./.circleci/ansible
           command: |
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-server.yaml -vv
+            ansible-playbook -i inventory.txt deploy-server.y
+            aml -vv
 
   smoke-test:
     executor: python
