@@ -184,7 +184,6 @@ jobs:
             cat inventory.txt
       - run:
           name: Configure server
-          working_directory: ./.circleci/ansible
           command: |
             echo ENVIRONMENT=production > "backend/.env"
 
