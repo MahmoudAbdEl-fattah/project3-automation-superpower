@@ -169,8 +169,10 @@ jobs:
            
   configure-infrastructure:
     executor: python
+    - run: apt-get update && apt-get install -y openssh-client git
     steps:
       - checkout
+
       - add_ssh_keys:
           fingerprints: ["cd:d9:ea:e3:5e:a7:56:05:40:f2:8f:f9:a2:49:64:94"]
       - attach_workspace:
