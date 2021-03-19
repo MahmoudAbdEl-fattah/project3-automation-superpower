@@ -162,9 +162,9 @@ jobs:
               --output text >> .circleci/ansible/inventory.txt
             cat .circleci/ansible/inventory.txt
       - persist_to_workspace:
-          root: .
+          root: ~/
           paths:
-            - .circleci/ansible/inventory.txt
+            - project/.circleci/ansible/inventory.txt
       #- destroy_environment
            
   configure-infrastructure:
@@ -174,7 +174,7 @@ jobs:
       - add_ssh_keys:
           fingerprints: ["65:fe:05:c9:b0:67:f6:01:25:aa:40:8f:ed:51:5c:ce"]
       - attach_workspace:
-          at: .
+          at: ~/
       - run:
           name: Install dependencies
           working_directory: ./.circleci/ansible
@@ -309,43 +309,13 @@ jobs:
  
 workflows:
   default:
-    jobs:
-      - build-frontend   
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]     
-      - test-backend:
-          requires: [build-backend] 
-      - scan-frontend:
-          requires: [build-frontend]          
-      - scan-backend:
-          requires: [build-backend]          
+    jobs:   
       - create-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          #requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
               only: [master]
       - configure-infrastructure:
           requires: [create-infrastructure]            
-      - run-migrations:
-          requires:
-            - test-backend
-            - test-frontend
-            - scan-backend
-            - scan-frontend
-            - configure-infrastructure
-          filters:
-            branches:
-              only:
-                - master
-      - deploy-backend:
-          requires:
-            - run-migrations
-      - deploy-frontend:
-          requires:
-            - run-migrations
-      - smoke-test:
-          requires:
-            - deploy-backend
-            - deploy-frontend
+
     
