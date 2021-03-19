@@ -28,7 +28,7 @@ executors:
       - image: circleci/node:13.8.0
   python:
     docker:
-      - image: python:3.9.0-alpine
+      - image: python:3.7-alpine3.11
   aws:
     docker:
       - image: amazon/aws-cli
@@ -168,12 +168,8 @@ jobs:
       #- destroy_environment
            
   configure-infrastructure:
-    docker:
-      - image: cimg/base:2020.01
+    executor: python
     steps:
-      - checkout
-      - aws-cli/setup
-      - run: apt-get update && apt-get install -y openssh-client git
       - add_ssh_keys:
           fingerprints: ["cd:d9:ea:e3:5e:a7:56:05:40:f2:8f:f9:a2:49:64:94"]
       - attach_workspace:
