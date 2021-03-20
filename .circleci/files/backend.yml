@@ -10,7 +10,7 @@ Resources:
   InstanceSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupName: !Sub UdaPeople-${ID}
+      GroupName: !Sub proj3-${ID}
       GroupDescription: Allow port 22, 3030, 9090 HTTP, 9093 Prometheus Alertmanager, and 9100 Prometheus Node exporter.
       SecurityGroupIngress:
         - IpProtocol: tcp
