@@ -198,8 +198,8 @@ jobs:
     executor: node
     steps:
       - checkout
-      - attach_workspace:
-          at: .
+      #- attach_workspace:
+       #   at: .
       - run:
           name: Install AWS CLI dependencies
           working_directory: /tmp
@@ -226,6 +226,7 @@ jobs:
               curl -H "Content-Type: text/plain" -H "token: 09307427-b13e-44a4-9372-357a0b1f40a2" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             fi
             echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
+      - destroy-environment
 
   deploy-frontend:
     executor: node
@@ -257,6 +258,7 @@ jobs:
           root: .
           paths:
             - frontend/dist
+      - destroy-environment
 
   deploy-backend:
     executor: python
@@ -281,6 +283,7 @@ jobs:
             cat inventory.txt
             ansible-playbook -i inventory.txt deploy-server.y
             aml -vv
+      - destroy-environment
 
   smoke-test:
     executor: python
