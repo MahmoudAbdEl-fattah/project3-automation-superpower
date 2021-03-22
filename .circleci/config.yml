@@ -53,7 +53,6 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: v2-frontendCache  # -<< pipeline.id >>
-
   build-backend:
     executor: node
     steps:
