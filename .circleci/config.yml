@@ -229,7 +229,7 @@ jobs:
 
             cd backend
             sudo npm install
-            #sudo npm i
+            sudo npm i
             #sudo npm audit fix --audit-level=critical --force
             #sudo npm run build
             
