@@ -214,7 +214,7 @@ jobs:
           working_directory: ./backend
           command: |
 
-            cd backend
+            
             sudo npm install
             sudo npm i
             sudo npm audit fix --audit-level=critical --force
