@@ -52,25 +52,27 @@ jobs:
       - save_cache:
           paths: [frontend/node_modules]
           key: v3-frontendCache  # -<< pipeline.id >>
+
+
   build-backend:
-    executor: node
+    docker:
+      - image: circleci/node:13.8.0
     steps:
       - checkout
       - restore_cache:
-          keys: [v2-backend-build]
+          keys: [backend-build]
       - run:
           name: Back-end build
           command: |
-            cd backend
-            npm i
-            npm run build
+             cd backend
+             #npm install -qq package.json
+             npm install
+             npm run build 
+             npm view standard-version version
       - save_cache:
           paths: [backend/node_modules]
-          key: v2-backend-build  # -<< pipeline.id >>
-      - save_cache:
-          paths: [backend/dist]
-          key: backend-dist  # -<< pipeline.id >>
-
+          key: backend-build
+          
   test-frontend:
     executor: node
     steps:
@@ -192,58 +194,67 @@ jobs:
             ansible-playbook -i inventory.txt configure-server.yml
       #- destroy-environment
 
+
   run-migrations:
-    executor: node
+    docker:
+      - image: circleci/node:12.18.4
     steps:
       - checkout
-      #- attach_workspace:
-       #   at: .
+
       - restore_cache:
-          keys: ["v2-backend-build"]          
+          keys: [backend-build]
+
+      - attach_workspace:
+          at: ~/project/
+
       - run:
-          name: Install AWS CLI dependencies
-          working_directory: /tmp
+          name: awscli install
           command: |
-            sudo apt-get update && sudo apt-get install -yy less
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install
+            sudo apt-get -y -qq update
+            sudo apt-get -y -qq install python3
+            sudo apt-get -qq install awscli
+
+            ls -la ~/project/backend
+            cat ~/project/backend/.env
+
+#      - run:
+#          name: add values to .env files
+#          command: |
+#            cd /home/circleci/project/backend
+#            pwd
+
+            #touch /home/circleci/project/backend/.env
+            #echo ENVIRONMENT=production >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_CONNECTION=postgres >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_HOST=$TYPEORM_HOST >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_PORT=$TYPEORM_PORT >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "/home/circleci/project/backend/.env"
+            #echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "/home/circleci/project/backend/.env"
+            #echo NODE_ENV=development >> "/home/circleci/project/backend/.env"
+
       - run:
           name: Run migrations
-
           command: |
-            echo ENVIRONMENT=production > "backend/.env"
-
-            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
-            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
-            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
-            echo NODE_ENV=production >> "backend/.env"
-
-            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-
             cd backend
             npm install
-            #npm i
-            npm run migrations > migration_status
-      - run:
-          name: Send migration results to memstash
-          working_directory: ./backend
-          command: |
-            if grep -q "has been executed successfully" migration_status
-            then
-              echo "DB migration was successful, will update memstash..."
-              curl -H "Content-Type: text/plain" -H "token: e4eb2ece-7512-4ace-85dc-bc851a1cf516" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
-            else
-              echo "DB migration failed, please verify setup! Probably the database already exists. Verify setup!"
-              curl -H "Content-Type: text/plain" -H "token: 09307427-b13e-44a4-9372-357a0b1f40a2" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
-            fi
-            echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
-      #- destroy-environment
+            npm run build
+
+            echo 'DUMP MIGRATIONS'
+            echo "PWD: " $(pwd)
+            npm run migrations >> ~/project/backend/migrations_dump.txt
+
+            echo 'DISPLAY CONTENTS'
+            echo '*****************'
+            cat migrations_dump.txt
+            echo '-----------------'
+            #ls -la
+            #echo "running migrations!!!!!!"
+            #npm run migrations
+            #cat  /home/circleci/project/backend/migrations_dump.txt
       
 
   deploy-frontend:
@@ -335,21 +346,21 @@ workflows:
       - build-backend
       #- test-frontend:
        #   requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
-      - scan-backend:
-          requires: [build-backend]
-      - create-infrastructure:
-          requires: [test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [master]
-      - configure-infrastructure:
-          requires: [create-infrastructure]
+      #- test-backend:
+       #   requires: [build-backend]
+      #- scan-frontend:
+      #    requires: [build-frontend]
+      #- scan-backend:
+       #   requires: [build-backend]
+      #- create-infrastructure:
+      #    requires: [test-backend, scan-frontend, scan-backend]
+       #   filters:
+        #    branches:
+         #     only: [master]
+      #- configure-infrastructure:
+       #   requires: [create-infrastructure]
       - run-migrations:
-          requires: [configure-infrastructure]
+          requires: [build-frontend, build-backend]
       - deploy-backend:
           requires: [run-migrations]
       - deploy-frontend:
