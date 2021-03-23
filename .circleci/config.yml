@@ -167,7 +167,7 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      - destroy-environment
+      #- destroy-environment
       
            
   configure-infrastructure:
@@ -191,7 +191,7 @@ jobs:
           command: |      
             cd .circleci/ansible/
             ansible-playbook -i inventory.txt configure-server.yml
-      - destroy-environment
+      #- destroy-environment
 
   run-migrations:
     executor: node
@@ -228,9 +228,8 @@ jobs:
             echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
 
             cd backend
-
             npm install
-
+            #npm i
             npm run migrations > migration_status
       - run:
           name: Send migration results to memstash
@@ -245,7 +244,7 @@ jobs:
               curl -H "Content-Type: text/plain" -H "token: 09307427-b13e-44a4-9372-357a0b1f40a2" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             fi
             echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
-      - destroy-environment
+      #- destroy-environment
       
 
   deploy-frontend:
