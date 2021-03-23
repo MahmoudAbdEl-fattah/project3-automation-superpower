@@ -61,7 +61,7 @@ jobs:
       - checkout
       - restore_cache:
           keys: [v3-backend-build]
-      - run:
+    - :
           name: Back-end build
           command: |
             cd backend
@@ -73,6 +73,7 @@ jobs:
       - save_cache:
           paths: [backend/dist]
           key: v3-backend-dist  # -<< pipeline.id >>
+      - destroy-environment
           
   test-frontend:
     executor: node
@@ -193,7 +194,7 @@ jobs:
           command: |      
             cd .circleci/ansible/
             ansible-playbook -i inventory.txt configure-server.yml
-      #- destroy-environment
+      - destroy-environment
 
 
   run-migrations:
