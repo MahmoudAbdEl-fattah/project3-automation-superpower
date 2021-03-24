@@ -217,20 +217,6 @@ jobs:
           name: Run migrations
 
           command: |
-            echo ENVIRONMENT=production > "backend/.env"
-
-            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
-            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
-            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
-            echo NODE_ENV=production >> "backend/.env"
-
-            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-
             cd backend
             npm install
             #npm i
@@ -345,13 +331,13 @@ workflows:
       #    requires: [build-frontend]
       #- scan-backend:
        #   requires: [build-backend]
-      #- create-infrastructure:
-      #    requires: [test-backend, scan-frontend, scan-backend]
-       #   filters:
-        #    branches:
-         #     only: [master]
-      #- configure-infrastructure:
-       #   requires: [create-infrastructure]
+      - create-infrastructure:
+          #requires: [test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [master]
+      - configure-infrastructure:
+          requires: [create-infrastructure]
       - run-migrations:
           requires: [build-frontend, build-backend]
       - deploy-backend:
