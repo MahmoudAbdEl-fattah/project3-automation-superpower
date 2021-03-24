@@ -217,10 +217,8 @@ jobs:
 
       - run:
           name: add values to .env files
+          working_directory: ./backend
           command: |
-            cd /home/circleci/project/backend
-            pwd
-
             echo "ENVIRONMENT=production" > backend/.env
             echo "NODE_ENV=prouction" >> backend/.env
             echo "TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS" >> backend/.env
