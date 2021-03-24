@@ -354,7 +354,7 @@ workflows:
          #     only: [master]
       #- configure-infrastructure:
        #   requires: [create-infrastructure]
-      - run-migrations:
+      - run-migrations
           #requires: [build-frontend, build-backend]
       - deploy-backend:
           requires: [run-migrations]
