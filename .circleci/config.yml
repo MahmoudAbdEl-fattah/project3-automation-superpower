@@ -20,7 +20,7 @@ commands:
       - run:
           name: Destroy environments
           when: on_fail
-          command: |
+          command: | 
             aws s3 rb s3://proj3-${CIRCLE_WORKFLOW_ID:0:7} --force
             aws cloudformation delete-stack --stack-name  proj3-backend-<< parameters.workflow-id >>
             aws cloudformation delete-stack --stack-name  proj3-frontend-<< parameters.workflow-id >>
@@ -61,7 +61,7 @@ jobs:
       - checkout
       - restore_cache:
           keys: [v3-backend-build]
-    - :
+      - run:
           name: Back-end build
           command: |
             cd backend
@@ -170,7 +170,7 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      #- destroy-environment
+      - destroy-environment
       
            
   configure-infrastructure:
