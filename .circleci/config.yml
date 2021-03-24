@@ -205,21 +205,42 @@ jobs:
        #   at: .
       - restore_cache:
           keys: ["v3-backend-build"]          
+      - attach_workspace:
+          at: ~/project/
+
       - run:
-          name: Install AWS CLI dependencies
-          working_directory: /tmp
+          name: awscli install
           command: |
-            sudo apt-get update && sudo apt-get install -yy less
-            curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-            unzip awscliv2.zip
-            sudo ./aws/install
+            sudo apt-get -y -qq update
+            sudo apt-get -y -qq install python3
+            sudo apt-get -qq install awscli
+
+      - run:
+          name: add values to .env files
+          command: |
+            cd /home/circleci/project/backend
+            pwd
+
+            touch /home/circleci/project/backend/.env
+            echo "ENVIRONMENT=production" >> "/home/circleci/project/backend/.env"
+            echo "NODE_ENV=prouction" >> "/home/circleci/project/backend/.env" 
+            echo "TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_ENTITIES=$TYPEORM_ENTITIES" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_CONNECTION=$TYPEORM_CONNECTION" >> "/home/circleci/project/backend/.env"
+
+            echo "TYPEORM_HOST=$TYPEORM_HOST" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_PORT=$TYPEORM_PORT" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_USERNAME=$TYPEORM_USERNAME" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_PASSWORD=$TYPEORM_PASSWORD" >> "/home/circleci/project/backend/.env"
+            echo "TYPEORM_DATABASE=$TYPEORM_DATABASE" >> "/home/circleci/project/backend/.env"
       - run:
           name: Run migrations
 
           command: |
             cd backend
             npm install
-            #npm i
+            npm run build
             npm run migrations > migration_status
       - run:
           name: Send migration results to memstash
