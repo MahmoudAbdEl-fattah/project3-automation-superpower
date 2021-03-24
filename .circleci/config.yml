@@ -331,13 +331,13 @@ workflows:
       #    requires: [build-frontend]
       #- scan-backend:
        #   requires: [build-backend]
-      - create-infrastructure:
+      #- create-infrastructure:
           #requires: [test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [master]
-      - configure-infrastructure:
-          requires: [create-infrastructure]
+       #   filters:
+        #    branches:
+         #     only: [master]
+      #- configure-infrastructure:
+       #   requires: [create-infrastructure]
       - run-migrations:
           requires: [build-frontend, build-backend]
       - deploy-backend:
