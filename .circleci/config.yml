@@ -44,7 +44,7 @@ jobs:
       - restore_cache:
           keys: [v3-frontendCache]
       - run:
-          name: Build front-end
+          name: Build frontend
           command: |
             cd frontend
             sudo npm install webpack-dev-server -g
@@ -62,7 +62,7 @@ jobs:
       - restore_cache:
           keys: [v3-backend-build]
       - run:
-          name: Back-end build
+          name: Backend build
           command: |
             cd backend
             npm install
@@ -82,7 +82,8 @@ jobs:
       - restore_cache:
           keys: ["v3-frontendCache"]  # -<< pipeline.id >>"
       - run:
-          name: Font-end test
+          name: Fontend test
+          no_output_timeout: 30m          
           command: |
             cd frontend
             npm run test
@@ -94,7 +95,7 @@ jobs:
       - restore_cache:
           keys: ["v2-backend-build"]  # -<< pipeline.id >>"
       - run:
-          name: Back-end test
+          name: Backend test
           command: |
             cd backend
             npm run test
@@ -107,7 +108,7 @@ jobs:
       - restore_cache:
           keys: ["v3-frontendCache"]  # -<< pipeline.id >>"
       - run:
-          name: scan frontend
+          name: frontend scan
           command: |
             cd frontend
             npm audit --audit-level=critical
@@ -119,7 +120,7 @@ jobs:
       - restore_cache:
           keys: ["v2-backend-build"]  # -<< pipeline.id >>"
       - run:
-          name: Back-end security scan
+          name: Backend scan
           command: |
             cd backend
             npm install
