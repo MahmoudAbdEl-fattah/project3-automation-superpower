@@ -250,7 +250,6 @@ jobs:
           name: Get backend url
           command: |
             export BACKEND_URL=$(sed -n 2p .circleci/ansible/inventory.txt)
-            npm run build
       - run:
           name: Deploy frontend objects to S3
           working_directory: ./frontend
