@@ -235,11 +235,12 @@ jobs:
     executor: node
     steps:
       - checkout
+      - restore_cache:
+          keys: [v3-frontendCache]
       - attach_workspace:
           at: ~/
       - run:
           name: Install AWS CLI dependencies
-          working_directory: /tmp
           command: |
             sudo apt-get update && sudo apt-get install -yy less
             curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
@@ -249,6 +250,7 @@ jobs:
           name: Rebuild frontend with backend API Url
           working_directory: ./frontend
           command: |
+          
             export API_URL=$(curl -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request GET https://api.memstash.io/values/BACKEND_URL)
             echo "${API_URL}"
             npm run build
@@ -264,24 +266,30 @@ jobs:
     executor: python
     steps:
       - checkout
+      - restore_cache:
+          keys: [v3-backend-build]      
       - add_ssh_keys:
           fingerprints: ["cd:d9:ea:e3:5e:a7:56:05:40:f2:8f:f9:a2:49:64:94"]
       - attach_workspace:
           at: ~/
       - run:
           name: Install dependencies
-          working_directory: /tmp
           command: |
             apk add --update ansible curl rsync openssh nodejs npm
+            apk add --update tar gzip ansible nodejs npm curl openssh-client
+            pip install awscli            
             ansible --version
             pip install awscli
             aws --version
+            tar -C backend -czvf artifact.tar.gz .
+
       - run:
           name: Deploy backend
+          no_output_timeout: 30m
           working_directory: ./.circleci/ansible
           command: |
             cat inventory.txt
-            ansible-playbook -i inventory.txt deploy-server.y
+            ansible-playbook -i inventory.txt deploy-backend.yml
             aml -vv
       #- destroy-environment
   smoke-test:
@@ -319,27 +327,10 @@ jobs:
 workflows:
   default:
     jobs:   
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
-      - scan-backend:
-          requires: [build-backend]
-      - create-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
-          filters:
-            branches:
-              only: [master]
-      - configure-infrastructure:
-          requires: [create-infrastructure]
-      - run-migrations:
-          requires: [configure-infrastructure]
+
       - deploy-backend:
-          requires: [run-migrations]
+         # requires: [run-migrations]
       - deploy-frontend:
-          requires: [run-migrations]
-    
+          requires: [deploy-backend]
+      - smoke-test
+          #requires: [deploy-backend, deploy-frontend]    
