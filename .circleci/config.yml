@@ -282,12 +282,11 @@ jobs:
             cd /home
             tar czf backend.tar.gz -P /home/circleci/project/backend/dist
       - run:
-          name: Deploy backend 2
-          command: |
-            export ANSIBLE_HOST_KEY_CHECKING=False
-            ansible-playbook \
-              -i .circleci/ansible/inventory.txt \
-              .circleci/ansible/deploy-backend.yml
+          name: backend server
+          no_output_timeout: 30m
+          command: |      
+            cd .circleci/ansible/
+            ansible-playbook -i inventory.txt configure-server.yml
       - run:
           name: Install AWS CLI for rollback
           when: on_fail
@@ -332,7 +331,7 @@ workflows:
 
       - deploy-backend
          # requires: [run-migrations]
-      - deploy-frontend:
-          requires: [deploy-backend]
+      - deploy-frontend
+          #requires: [deploy-backend]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]   
