@@ -328,7 +328,7 @@ workflows:
   default:
     jobs:   
 
-      - deploy-backend:
+      - deploy-backend
          # requires: [run-migrations]
       - deploy-frontend:
           requires: [deploy-backend]
