@@ -250,7 +250,14 @@ jobs:
           name: Rebuild frontend with backend API Url
           working_directory: ./frontend
           command: |
-          
+            export BACKEND_URL=$(sed -n 2p .circleci/ansible/inventory.txt)
+            export API_URL="http://${BACKEND_URL}:3030"
+
+            echo ENVIRONMENT=production > "frontend/.env"
+            echo NODE_ENV=production >> "frontend/.env"
+            echo API_URL=$API_URL >> "frontend/.env"
+
+            echo $API_URL          
             export API_URL=$(curl -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request GET https://api.memstash.io/values/BACKEND_URL)
             echo "${API_URL}"
             npm run build
