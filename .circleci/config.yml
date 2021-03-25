@@ -247,15 +247,14 @@ jobs:
             unzip awscliv2.zip
             sudo ./aws/install
       - run:
-          name: Rebuild frontend with backend API Url
+          name: Get backend url
           command: |
-            export API_URL=$(curl -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request GET https://api.memstash.io/values/BACKEND_URL)
-            echo "${API_URL}"
+            export BACKEND_URL=$(sed -n 2p .circleci/ansible/inventory.txt)
+            npm run build
       - run:
           name: Deploy frontend objects to S3
           working_directory: ./frontend
           command: |
-            npm run build
             aws s3 cp ./dist "s3://proj3-${CIRCLE_WORKFLOW_ID:0:7}" --recursive
 
       #- destroy-environment
@@ -342,8 +341,8 @@ workflows:
 
 
       - deploy-backend
-  #        requires: [run-migrations]
+         # requires: [run-migrations]
       - deploy-frontend
- #         requires: [run-migrations]
+          #requires: [run-migrations]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
