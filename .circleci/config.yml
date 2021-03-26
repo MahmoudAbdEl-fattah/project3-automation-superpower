@@ -317,8 +317,8 @@ jobs:
     executor: python
     steps:
       - checkout
-      - attach_workspace:
-          at: ~/      
+     # - attach_workspace:
+       #   at: ~/      
       - run:
           name: Install dependencies
           command: |
