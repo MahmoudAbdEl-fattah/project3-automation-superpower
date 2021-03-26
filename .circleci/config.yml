@@ -244,8 +244,8 @@ jobs:
               curl -H "Content-Type: text/plain" -H "token: 09307427-b13e-44a4-9372-357a0b1f40a2" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             fi
             echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
 
   deploy-frontend:
     executor: node
@@ -277,8 +277,8 @@ jobs:
           working_directory: ./frontend
           command: |
             aws s3 cp ./dist "s3://proj3-${CIRCLE_WORKFLOW_ID:0:7}" --recursive
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
 
   deploy-backend:
     executor: python
@@ -310,8 +310,8 @@ jobs:
           when: on_fail
           command: |
             apk add --update py3-pip && pip3 install --upgrade pip && pip3 install awscli
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
 
   smoke-test:
     executor: python
@@ -347,7 +347,7 @@ jobs:
           name: Frontend smoke test.
           working_directory: ./backend
           command: |
-            URL="http://proj3-${CIRCLE_WORKFLOW_ID:0:7}.eu-central-1.amazonaws.com/index.html"
+            URL="http://proj3-${CIRCLE_WORKFLOW_ID:0:7}.us-east-1.amazonaws.com/index.html"
             curl -s ${URL} | grep -q "Welcome"
             echo "$URL"
             if curl -s $URL | grep "Welcome"
@@ -356,8 +356,8 @@ jobs:
             else
               exit 1
             fi
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
@@ -385,8 +385,8 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/oldworkflowid.txt
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
   cleanup:
     docker:
       - image: amazon/aws-cli
@@ -415,7 +415,7 @@ jobs:
               aws cloudformation delete-stack --stack-name "proj3-backend-prod-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "proj3-frontend-prod-${OldWorkflowID}"
             fi
-            
+
 workflows:
   default:
     jobs:   
@@ -446,5 +446,5 @@ workflows:
           requires: [deploy-backend, deploy-frontend]
       - cloudfront-update:
           requires: [smoke-test]
-      - cleanup:
-          requires: [cloudfront-update]
+      #- cleanup:
+       #   requires: [cloudfront-update]
