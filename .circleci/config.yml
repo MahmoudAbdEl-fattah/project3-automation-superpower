@@ -320,7 +320,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update curl
+            apk add --update tar gzip curl nodejs npm
             pip install awscli
       - attach_workspace:
           at: ~/
@@ -356,9 +356,8 @@ jobs:
             else
               exit 1
             fi
-      - destroy-environment
+      #- destroy-environment
       - revert-migrations
-
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
@@ -373,13 +372,13 @@ jobs:
           command: |
             aws cloudformation \
             list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-            --region eu-central-1 --no-paginate --output text >> ./.circleci/oldworkflowid.txt
+            --region us-east-1 --no-paginate --output text >> ./.circleci/oldworkflowid.txt
 
             aws cloudformation deploy \
               --template-file .circleci/files/cloudfront.yml \
-              --stack-name udapeople-cloudfront \
+              --stack-name proj3-cloudfront \
               --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=udapeople
+              --tags project=proj3
       - persist_to_workspace:
           root: ~/
           paths:
@@ -408,28 +407,17 @@ jobs:
             echo "${STACKS}"
 
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]; then
-              aws s3 rm s3://udapeople-${OldWorkflowID} --recursive
-              aws cloudformation delete-stack --stack-name "udapeople-backend-prod-${OldWorkflowID}"
-              aws cloudformation delete-stack --stack-name "udapeople-frontend-prod-${OldWorkflowID}"
+              aws s3 rm s3://proj3-${OldWorkflowID} --recursive
+              aws cloudformation delete-stack --stack-name "proj3-backend-prod-${OldWorkflowID}"
+              aws cloudformation delete-stack --stack-name "proj3-frontend-prod-${OldWorkflowID}"
             fi
-
-
 
 workflows:
   default:
     jobs:   
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
-      - scan-backend:
-          requires: [build-backend]
+
       - create-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+       #   requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
               only: [master]
