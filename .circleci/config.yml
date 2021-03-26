@@ -358,7 +358,7 @@ jobs:
               exit 1
             fi
       #- destroy-environment
-      - revert-migrations
+      #- revert-migrations
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
@@ -386,7 +386,7 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/oldworkflowid.txt
-      - destroy-environment
+      #- destroy-environment
 
   cleanup:
     docker:
