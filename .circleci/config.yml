@@ -34,11 +34,7 @@ commands:
             migrations=$(curl -H "token: e4eb2ece-7512-4ace-85dc-bc851a1cf516" --request GET https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7})
             if(( migrations==1 )); 
             then
-              cd ~/project/backend
-              sudo apt-get -y -qq update
-              sudo apt-get -y -qq install python3
-              sudo apt-get -qq install awscli              
-              npm install
+              cd ~/project/backend          
               npm run migrations:revert
             fi
 
