@@ -379,7 +379,7 @@ jobs:
 
             aws cloudformation deploy \
               --template-file .circleci/files/cloudfront.yml \
-              --stack-name proj3-cloudfront \
+              --stack-name cloudfront-distribution \
               --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
               --tags project=proj3
       - persist_to_workspace:
