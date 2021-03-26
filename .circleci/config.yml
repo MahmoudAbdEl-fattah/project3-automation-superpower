@@ -423,5 +423,5 @@ workflows:
 
 
       - cloudfront-update
-      - cleanup
-
+      - cleanup:
+          requires: [cloudfront-update]
