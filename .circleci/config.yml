@@ -76,15 +76,13 @@ jobs:
       - checkout
       #- restore_cache:
        #   keys: [v3-backend-build]
-    - run:
+      - run:
           name: Backend build
           command: |
-            cd backend
-            npm install
-            npm run build
-      - save_cache:
-          paths: [backend/node_modules]
-          key: v3-backend-build  # -<< pipeline.id >>
+            return 1
+      #- save_cache:
+       #   paths: [backend/node_modules]
+        #  key: v3-backend-build  # -<< pipeline.id >>
       #- save_cache:
        #   paths: [backend/dist]
         #  key: v3-backend-dist  # -<< pipeline.id >>
