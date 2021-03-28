@@ -114,7 +114,7 @@ jobs:
             cd backend
             pm run test
       - slack/notify:
-          channel: devops-project-3-autumation-super-power
+          channel: '#devops-project-3-autumation-super-power'
           event: fail
           template: basic_fail_1       
             
