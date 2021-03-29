@@ -113,7 +113,7 @@ jobs:
           name: Backend test
           command: |
             cd backend
-            pm run test
+            npm run test
       - slack/notify:
           channel: '#devops-project-3-autumation-super-power'
           event: fail
