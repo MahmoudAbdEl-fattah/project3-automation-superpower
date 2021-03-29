@@ -58,7 +58,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [v3-frontendCache]
+          keys: [v4-frontendCache]
       - run:
           name: Build frontend
           command: |
@@ -68,7 +68,7 @@ jobs:
             sudo npm run build
       - save_cache:
           paths: [frontend/node_modules]
-          key: v3-frontendCache  
+          key: v4-frontendCache  
 
 
   build-backend:
@@ -76,7 +76,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [v3-backend-build]
+          keys: [v4-backend-build]
       - run:
           name: Backend build
           command: |
@@ -84,10 +84,10 @@ jobs:
             npm run build
       - save_cache:
           paths: [backend/node_modules]
-          key: v3-backend-build  
+          key: v4-backend-build  
       - save_cache:
           paths: [backend/dist]
-          key: v3-backend-dist  
+          key: v4-backend-dist  
 
           
   test-frontend:
@@ -95,7 +95,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v3-frontendCache"]  
+          keys: ["v4-frontendCache"]  
       - run:
           name: Fontend test
           no_output_timeout: 30m          
@@ -108,7 +108,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v2-backend-build"]  
+          keys: ["v4-backend-build"]  
       - run:
           name: Backend test
           command: |
@@ -124,7 +124,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v3-frontendCache"]  
+          keys: ["v4-frontendCache"]  
       - run:
           name: frontend scan
           command: |
@@ -136,7 +136,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v2-backend-build"]  
+          keys: ["v4-backend-build"]  
       - run:
           name: Backend scan
           command: |
@@ -219,7 +219,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v3-backend-build"]          
+          keys: ["v4-backend-build"]          
       - run:
           name: awscli install
           command: |
@@ -254,7 +254,7 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: [v3-frontendCache]
+          keys: [v4-frontendCache]
       - attach_workspace:
           at: ~/
       - run:
