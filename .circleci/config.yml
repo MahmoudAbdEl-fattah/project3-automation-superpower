@@ -306,7 +306,7 @@ jobs:
           no_output_timeout: 30m
           command: |      
             cd .circleci/ansible/
-            ansible-playbook -i inventory.txt configure-server.yml
+            ansible-playbook -i inventory.txt deploy-backend.yml
       - run:
           name: Install AWS CLI for rollback
           when: on_fail
