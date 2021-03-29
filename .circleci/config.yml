@@ -157,8 +157,8 @@ jobs:
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
-              --stack-name "proj3-backend-<< pipeline.parameters.workflow-id >>" \
-              --parameter-overrides ID="<< pipeline.parameters.workflow-id >>" \
+              --stack-name "proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
               --tags project=proj3
       - run:
           name: Save backend URL in memstash to reuse it in frontend deploying - go to MemStash.io, add key= BACKEND_IP, value= http://$BACKEND_IP:3030
@@ -175,8 +175,8 @@ jobs:
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --stack-name "proj3-frontend-<< pipeline.parameters.workflow-id >>" \
-              --parameter-overrides ID="<< pipeline.parameters.workflow-id >>" \
+              --stack-name "proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
               --tags project=proj3
       - run:
           name: Add back-end ip to ansible inventory
