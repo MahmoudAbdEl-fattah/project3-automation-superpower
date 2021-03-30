@@ -167,8 +167,9 @@ jobs:
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --output text)   
-
-            curl -H "Content-Type: text/plain" -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request PUT --data ""http://$BACKEND_IP:3030"" https://api.memstash.io/values/BACKEND_URL           
+            
+            echo "BACKEND_IP=$BACKEND_IP"
+            curl -H "Content-Type: text/plain" -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request PUT --data "$BACKEND_IP" https://api.memstash.io/values/BACKEND_URL-${CIRCLE_WORKFLOW_ID:0:7}           
                
       - run:
           name: Ensure front-end infrastructure exist
@@ -183,7 +184,7 @@ jobs:
           command: |
             aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=proj3" \
+              --filters "Name=tag:project,Values=eproj3-backend-ip-${CIRCLE_WORKFLOW_ID:0:7}" \
               --output text >> .circleci/ansible/inventory.txt
             cat .circleci/ansible/inventory.txt
       - persist_to_workspace:
@@ -208,6 +209,14 @@ jobs:
             apk add --update tar gzip ansible curl
             pip install awscli
       - run:
+          name: Setup inventory file
+          command: |
+            cd .circleci/ansible
+            echo "[web]" >> inventory.txt
+            BACKEND_IP=$(curl -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request GET https://api.memstash.io/values/BACKEND_URL-${CIRCLE_WORKFLOW_ID:0:7})
+            echo $BACKEND_IP >> inventory.txt
+            cat inventory.txt
+      - run:
           name: Configure server
           no_output_timeout: 30m
           command: |      
@@ -220,7 +229,9 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v4-backend-build"]          
+          keys: ["v4-backend-build"]   
+      - attach_workspace:
+          at: ~/       
       - run:
           name: awscli install
           command: |
@@ -228,17 +239,46 @@ jobs:
             sudo apt-get -y -qq install python3
             sudo apt-get -qq install awscli
       - run:
+          name: add values to .env files # Create a `backend/.env` file and add those values there dynamically
+          command: |
+            echo PWD
+            pwd
+            #ls -la
+            touch backend/.env
+            echo ENVIRONMENT=production >> "backend/.env"
+            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
+            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
+            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
+            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
+            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
+
+      - run:
           name: Run migrations
           command: |
-            cd backend
+            cd backend 
             npm install
             npm run build
-            npm run migrations > migration_status
+            pwd
+            echo " THIS IS .env CONTENTS:"
+            cat .env
+            echo 'DUMP MIGRATIONS'
+            echo 'hello world!!' > migrations_dump.txt
+            npm run migrations >> migrations_dump.txt
+            echo "generated file!" 
+            pwd
+            ls -la
+            echo 'DISPLAY CONTENTS'
+            echo '*****************'
+            cat migrations_dump.txt
       - run:
           name: Send migration results to memstash
           working_directory: ./backend
           command: |
-            if grep -q "has been executed successfully" migration_status
+            if grep -q "has been executed successfully" migrations_dump.txt
             then
               echo "DB migration was successful, will update memstash..."
               curl -H "Content-Type: text/plain" -H "token: e4eb2ece-7512-4ace-85dc-bc851a1cf516" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
@@ -246,7 +286,10 @@ jobs:
               echo "DB migration failed, please verify setup! Probably the database already exists. Verify setup!"
               curl -H "Content-Type: text/plain" -H "token: 09307427-b13e-44a4-9372-357a0b1f40a2" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             fi
-            echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
+            echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"    
+      - save_cache:
+          paths: [backend/node_modules]
+          key: v4-backend-build 
       - destroy-environment
       - revert-migrations
 
@@ -254,10 +297,10 @@ jobs:
     executor: node
     steps:
       - checkout
-      - restore_cache:
-          keys: [v4-frontendCache]
-      - attach_workspace:
-          at: ~/
+      #- restore_cache:
+       #   keys: [v4-frontendCache]
+      #- attach_workspace:
+       #   at: ~/
       - run:
           name: Install AWS CLI dependencies
           command: |
@@ -266,20 +309,28 @@ jobs:
             unzip awscliv2.zip
             sudo ./aws/install
       - run:
-          name: Get backend url
+          name: Install dependencies
           command: |
-            export BACKEND_URL=$(sed -n 2p .circleci/ansible/inventory.txt)
+            curl -sL https://rpm.nodesource.com/setup_lts.x | bash - #
+            yum -y install nodejs
+            yum -y install tar gzip
       - run:
-          name: Build frontend
+          name: Get backend url 
           command: |
+            BACKEND_IP=$(curl -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request GET https://api.memstash.io/values/BACKEND_URL-${CIRCLE_WORKFLOW_ID:0:7})
+
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo API_URL="http://${BACKEND_IP}:3030" >> "frontend/.env"
+            echo "${API_URL}"
+      - run:
+          name: Deploy frontend objects (bake ip backend API_URL into the frontend)
+          command: |
+            npm install webpack-dev-server -g
             cd frontend
-            ls -la
-            npm run build            
-      - run:
-          name: Deploy frontend objects to S3
-          working_directory: ./frontend
-          command: |
-            aws s3 cp ./dist "s3://proj3-${CIRCLE_WORKFLOW_ID:0:7}" --recursive
+            npm install
+            npm run build
+            aws s3 cp ./dist s3://proj3-${CIRCLE_WORKFLOW_ID:0:7} --recursive 
+
       - destroy-environment
       - revert-migrations
 
@@ -295,19 +346,41 @@ jobs:
           name: Install dependencies
           command: |
             apk add --update ansible openssh-client tar gzip 
-      - restore_cache:
-          keys: ["v3-backend-dist"]  
+      #- restore_cache:
+       #   keys: ["v3-backend-dist"] 
+
       - run:
-          name: Deploy backend
+          name: Setup inventory file
           command: |
-            cd /home
-            tar czf backend.tar.gz -P /home/circleci/project/backend/dist
+            cd .circleci/ansible
+            echo "[web]" >> inventory.txt
+            BACKEND_IP=$(curl -H "token: b392d221-f54f-416d-a0e7-247f870c8a8c" --request GET https://api.memstash.io/values/BACKEND_URL-${CIRCLE_WORKFLOW_ID:0:7})
+            echo $BACKEND_IP >> inventory.txt
+            cat inventory.txt
       - run:
-          name: backend server
+          name: add values to env files to EC2
+          command: |
+            echo ENVIROMENT=production >> "backend/.env"
+            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
+            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
+            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
+            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
+            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
+            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"           
+      - run:
+          name: Compress Backend
+          command: |
+            tar -C backend -czvf artifact.tar.gz .
+            ls -la
+      - run:
+          name: Deploy Backend
           no_output_timeout: 30m
-          command: |      
-            cd .circleci/ansible/
-            ansible-playbook -i inventory.txt deploy-backend.yml
+          command: |
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+
       - run:
           name: Install AWS CLI for rollback
           when: on_fail
@@ -325,26 +398,32 @@ jobs:
           command: |   
             apk add --update tar gzip curl nodejs npm 
             pip install awscli
-      - attach_workspace:
-          at: ~/
+
       - run:
-          name: Get backend url
+          name: get backend URL and back end smoke test
           command: |
-            export BACKEND_URL=$(sed -n 2p .circleci/ansible/inventory.txt)
+            BACKEND_IP=$(aws ec2 describe-instances \
+                  --filters "Name=tag:Name, Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+                  --query 'Reservations[*].Instances[*].PublicIpAddress' \
+                  --output text)
+            echo ${BACKEND_IP}
+            export URL="http://$BACKEND_IP:3030/api/status"
+            echo $URL
+            curl $URL
       - run:
           name: Backend smoke test.
           command: |
-            if curl -s https://${BACKEND_URL}:3030/api/status
+            if curl -s https://$URL
             then
             return 1
             else
             return 0
-            fi            
+            fi     
       - run:
           name: Frontend smoke test.
           working_directory: ./backend
           command: |
-            URL="http://proj3-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com/index.html"
+            URL="http://proj3-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.com/index.html#/employees" #or edit to s3.website-us-east-1
             curl -s ${URL} | grep -q "Welcome"
             echo "$URL"
             if curl -s $URL | grep "Welcome"
@@ -376,7 +455,7 @@ jobs:
             aws cloudformation deploy \
               --template-file .circleci/files/cloudfront.yml \
               --stack-name cloudfront-distro \
-              --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+              --parameters ParameterKey=WorkflowID,ParameterValue=${CIRCLE_WORKFLOW_ID:0:7},UsePreviousValue=false
               --tags project=proj3
       - persist_to_workspace:
           root: ~/
@@ -409,8 +488,8 @@ jobs:
 
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]; then
               aws s3 rm s3://proj3-${OldWorkflowID} --recursive
-              aws cloudformation delete-stack --stack-name "proj3-backend-prod-${OldWorkflowID}"
-              aws cloudformation delete-stack --stack-name "proj3-frontend-prod-${OldWorkflowID}"
+              aws cloudformation delete-stack --stack-name "proj3-backend-${OldWorkflowID}"
+              aws cloudformation delete-stack --stack-name "proj3-frontend-${OldWorkflowID}"
             fi
 
 workflows:
