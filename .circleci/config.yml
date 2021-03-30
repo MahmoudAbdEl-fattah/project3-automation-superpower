@@ -23,13 +23,8 @@ commands:
           when: on_fail
           command: | 
             aws s3 rb s3://proj3-${CIRCLE_WORKFLOW_ID:0:7} --force
-            aws cloudformation delete-stack --stack-name  proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}
-            aws cloudformation delete-stack --stack-name  proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}
-      - run:
-          name: Destroy Promotion Stack
-          when: on_fail
-          command: |
-            aws cloudformation delete-stack --stack-name cloudfront-distro           
+            aws cloudformation delete-stack --stack-name  proj3-backend-<< parameters.workflow-id >>
+            aws cloudformation delete-stack --stack-name  proj3-frontend-<< parameters.workflow-id >>
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     steps:
@@ -173,7 +168,7 @@ jobs:
               --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --output text)   
 
-            curl -H "Content-Type: text/plain" -H "token: cbef6ff9a14" --request PUT --data ""http://$BACKEND_IP:3030"" https://api.memstash.io/values/BACKEND_URL           
+            curl -H "Content-Type: text/plain" -H "token: 9e34f4d1-eb3b-4f00-89c6-ddbef6ff9a14" --request PUT --data ""http://$BACKEND_IP:3030"" https://api.memstash.io/values/BACKEND_URL           
                
       - run:
           name: Ensure front-end infrastructure exist
@@ -386,13 +381,11 @@ jobs:
             list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
             --region us-east-1 --no-paginate --output text >> ./.circleci/oldworkflowid.txt
 
-            aws cloudformation update-stack --use-previous-template --stack-name cloudfront-distro --parameters ParameterKey=WorkflowID,ParameterValue=${CIRCLE_WORKFLOW_ID:0:7},UsePreviousValue=false 
-
-            #aws cloudformation deploy \
-             # --template-file .circleci/files/cloudfront.yml \
-              #--stack-name cloudfront-distro \
-              #--parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              #--tags project=proj3
+            aws cloudformation deploy \
+              --template-file .circleci/files/cloudfront.yml \
+              --stack-name cloudfront-distro \
+              --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+              --tags project=proj3
       - persist_to_workspace:
           root: ~/
           paths:
@@ -424,8 +417,8 @@ jobs:
 
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]; then
               aws s3 rm s3://proj3-${OldWorkflowID} --recursive
-              aws cloudformation delete-stack --stack-name "proj3-backend-${OldWorkflowID}"
-              aws cloudformation delete-stack --stack-name "proj3-frontend-${OldWorkflowID}"
+              aws cloudformation delete-stack --stack-name "proj3-backend-prod-${OldWorkflowID}"
+              aws cloudformation delete-stack --stack-name "proj3-frontend-prod-${OldWorkflowID}"
             fi
 
 workflows:
