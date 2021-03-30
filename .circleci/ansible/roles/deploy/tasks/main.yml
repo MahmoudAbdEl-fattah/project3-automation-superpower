@@ -6,35 +6,28 @@
     state: latest
     update_cache: yes
 
-- name: Copy backend dist files to remote server
-  copy:
-    src: /root/project/backend
-    dest: /home/ubuntu
-
-- name: Install Node modules
-  shell: |
-    cd /home/ubuntu/backend
-    npm install
-    npm install --only=dev
-    
-- name: Building backend service
-  shell: |
-    cd /home/ubuntu/backend
-    npm run build
-    npm run prestart:prod
-        
-- name: Executing node
+- name: Copy backend files
   become: true
+  copy:
+    src: /home/backend.tar.gz
+    dest: /home/ubuntu/backend.tar.gz
+
+- name: build and Start PM2
   shell: |
-    cd /home/ubuntu/backend
-    pm2 start npm --name backend -- start
-    pm2 ls
-- name: Building node service
-  shell: |
-    cd /home/ubuntu/backend
-    npm run build
+    cd /home/ubuntu/
+    tar xzvf backend.tar.gz
+    mv home/circleci/project/backend .
+    cd backend
+    sudo npm install -g npm@latest
+    sudo npm install -g webpack-dev-server
+    sudo npm install
+    sudo npm run build
     npm run prestart:prod
-    
+    pm2 start npm --name backend -- start
+    pm2 ls   
+    npm run build
+    npm run prestart:prod         
+
 - name: start pm2 for dist/main.js
   become: no
   shell: pm2 start main.js
