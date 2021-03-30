@@ -1,3 +1,4 @@
+
 version: 2.1
 
 orbs:
@@ -22,8 +23,13 @@ commands:
           when: on_fail
           command: | 
             aws s3 rb s3://proj3-${CIRCLE_WORKFLOW_ID:0:7} --force
-            aws cloudformation delete-stack --stack-name  proj3-backend-<< parameters.workflow-id >>
-            aws cloudformation delete-stack --stack-name  proj3-frontend-<< parameters.workflow-id >>
+            aws cloudformation delete-stack --stack-name  proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}
+            aws cloudformation delete-stack --stack-name  proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}
+      - run:
+          name: Destroy Promotion Stack
+          when: on_fail
+          command: |
+            aws cloudformation delete-stack --stack-name cloudfront-distro           
   revert-migrations:
     description: Revert the last migration if successfully run in the current workflow.
     steps:
@@ -31,13 +37,14 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            migrations=$(curl -H "token: e4eb2ece-7512-4ace-85dc-bc851a1cf516" --request GET https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7})
+            migrations=$(curl -H "token: 5cbbb2a1-6429-4852-b92e-7be22348c7ab" --request GET https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7})
             if(( migrations==1 )); 
             then
               cd ~/project/backend   
               npm install       
               npm run migrations:revert
             fi
+
 executors:
   node:
     docker:
@@ -45,14 +52,6 @@ executors:
   python:
     docker:
       - image: python:3.7-alpine3.11
-        environment:
-          TYPEORM_CONNECTION: $TYPEORM_CONNECTION
-          TYPEORM_HOST: $TYPEORM_HOST
-          TYPEORM_USERNAME: $TYPEORM_USERNAME
-          TYPEORM_PASSWORD: $TYPEORM_PASSWORD
-          TYPEORM_DATABASE: $TYPEORM_DATABASE
-          TYPEORM_MIGRATIONS: $TYPEORM_MIGRATIONS
-          TYPEORM_ENTITIES: $TYPEORM_ENTITIES
   aws:
     docker:
       - image: amazon/aws-cli
@@ -109,6 +108,7 @@ jobs:
           command: |
             cd frontend
             npm run test
+
   test-backend:
     executor: node
     steps:
@@ -149,6 +149,7 @@ jobs:
             cd backend
             npm install
             npm audit --audit-level=critical          
+
   create-infrastructure:
     docker:
       - image: amazon/aws-cli
@@ -164,7 +165,16 @@ jobs:
               --stack-name "proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
               --tags project=proj3
-  
+      - run:
+          name: Save backend URL in memstash to reuse it in frontend deploying - go to MemStash.io, add key= BACKEND_IP, value= http://$BACKEND_IP:3030
+          command: |
+            BACKEND_IP=$(aws ec2 describe-instances \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
+              --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --output text)   
+
+            curl -H "Content-Type: text/plain" -H "token: cbef6ff9a14" --request PUT --data ""http://$BACKEND_IP:3030"" https://api.memstash.io/values/BACKEND_URL           
+               
       - run:
           name: Ensure front-end infrastructure exist
           command: |
@@ -188,7 +198,8 @@ jobs:
       - destroy-environment
                  
   configure-infrastructure:
-    executor: python
+    docker:
+      - image: python:3.7-alpine3.11
     steps:
       - checkout
       - add_ssh_keys:
@@ -205,16 +216,6 @@ jobs:
           name: Configure server
           no_output_timeout: 30m
           command: |      
-            echo ENVIROMENT=production > "backend/.env"
-            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
-            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> "backend/.env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
-            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> "backend/.env"
-            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"          
             cd .circleci/ansible/
             ansible-playbook -i inventory.txt configure-server.yml
       - destroy-environment
@@ -245,20 +246,21 @@ jobs:
             if grep -q "has been executed successfully" migration_status
             then
               echo "DB migration was successful, will update memstash..."
-              curl -H "Content-Type: text/plain" -H "token: e4eb2ece-7512-4ace-85dc-bc851a1cf516" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
+              curl -H "Content-Type: text/plain" -H "token: 5cbbb2a1-6429-4852-b92e-7be22348c7ab" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             else
               echo "DB migration failed, please verify setup! Probably the database already exists. Verify setup!"
-              curl -H "Content-Type: text/plain" -H "token: 09307427-b13e-44a4-9372-357a0b1f40a2" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
+              curl -H "Content-Type: text/plain" -H "token: acb3ce0c-ef3a-4cf6-9182-b32390ad96a8" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             fi
             echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
       - destroy-environment
+      - revert-migrations
 
   deploy-frontend:
     executor: node
     steps:
       - checkout
-      - restore_cache:
-          keys: [v4-frontendCache]
+     # - restore_cache:
+      #    keys: [v4-frontendCache]
       - attach_workspace:
           at: ~/
       - run:
@@ -278,15 +280,13 @@ jobs:
             echo NODE_ENV=production >> "frontend/.env"
             echo API_URL=$API_URL >> "frontend/.env"
 
-            echo $API_URL
+            echo $API_URL      
       - run:
           name: Build frontend
           command: |
             cd frontend
             ls -la
-            cat .env
-            npm run build
-      - aws-cli/setup     
+            npm run build            
       - run:
           name: Deploy frontend objects to S3
           working_directory: ./frontend
@@ -308,37 +308,18 @@ jobs:
           command: |
             apk add --update ansible openssh-client tar gzip 
       - restore_cache:
-          keys: ["v4-backend-dist"]       
+          keys: ["v4-backend-dist"]  
       - run:
-          name: Build and deploy backend (remove node modules)
-          no_output_timeout: 30m
+          name: Deploy backend
           command: |
-            cd backend
-            touch .env
-            echo ENVIROMENT=production > ".env"
-            echo TYPEORM_CONNECTION=postgres >> ".env"
-            echo TYPEORM_MIGRATIONS_DIR=./src/migrations >> ".env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> ".env"
-            echo TYPEORM_MIGRATIONS=./src/migrations/*.ts >> ".env"
-            echo TYPEORM_HOST=$TYPEORM_HOST >> ".env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> ".env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> ".env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> ".env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> ".env"
-            npm i
-            npm run build
-            echo "List of contents before deleting: "
-            ls -a
-            echo "----------------------------------------"
-            rm -rf node_modules 
-            rm -rf dist
-            rm -rf test
-            rm README.md 
-            echo "List of files and dirs that will be sent to ansible: "
-            ls -a
-            echo "----------------------------------------"
-            mkdir -p ../.circleci/ansible/roles/deploy/files
-            cd ../.circleci/ansible
+            cd /home
+            tar czf backend.tar.gz -P /home/circleci/project/backend/dist
+      - run:
+          name: backend server
+          no_output_timeout: 30m
+          command: |   
+            export ANSIBLE_HOST_KEY_CHECKING=False
+            cd .circleci/ansible/
             ansible-playbook -i inventory.txt deploy-backend.yml
       - run:
           name: Install AWS CLI for rollback
@@ -404,13 +385,14 @@ jobs:
             aws cloudformation \
             list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
             --region us-east-1 --no-paginate --output text >> ./.circleci/oldworkflowid.txt
-            aws cloudformation update-stack --use-previous-template \
-              --template-file .circleci/files/cloudfront.yml \
-              --stack-name cloudfront-distro \
-              --parameters ParameterKey=WorkflowID,ParameterValue=${CIRCLE_WORKFLOW_ID:0:7},UsePreviousValue=false 
-              --tags project=proj3
-#            aws cloudformation update-stack --use-previous-template --stack-name udapeople-cloudfront --parameters ParameterKey=WorkflowID,ParameterValue=${CIRCLE_WORKFLOW_ID:0:7},UsePreviousValue=false 
-              
+
+            aws cloudformation update-stack --use-previous-template --stack-name cloudfront-distro --parameters ParameterKey=WorkflowID,ParameterValue=${CIRCLE_WORKFLOW_ID:0:7},UsePreviousValue=false 
+
+            #aws cloudformation deploy \
+             # --template-file .circleci/files/cloudfront.yml \
+              #--stack-name cloudfront-distro \
+              #--parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+              #--tags project=proj3
       - persist_to_workspace:
           root: ~/
           paths:
@@ -435,31 +417,23 @@ jobs:
           command: |
             cat ./.circleci/oldworkflowid.txt
             OldWorkflowID=$(head -n 1 ./.circleci/oldworkflowid.txt)
+
             export STACKS=$(aws cloudformation list-stacks --query "StackSummaries[*].StackName" \
               --stack-status-filter CREATE_COMPLETE --no-paginate --output text)
             echo "${STACKS}"
+
             if [[ "${STACKS[@]}" =~ "${OldWorkflowID}" ]]; then
               aws s3 rm s3://proj3-${OldWorkflowID} --recursive
               aws cloudformation delete-stack --stack-name "proj3-backend-${OldWorkflowID}"
               aws cloudformation delete-stack --stack-name "proj3-frontend-${OldWorkflowID}"
             fi
+
 workflows:
   default:
     jobs:   
-      - build-frontend
-      - build-backend
-      - test-frontend:
-          requires: [build-frontend]
-      - test-backend:
-          requires: [build-backend]
-          context:
-             - slack-secrets
-      - scan-backend:
-          requires: [build-backend]
-      - scan-frontend:
-          requires: [build-frontend]
+
       - create-infrastructure:
-          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+         # requires: [test-frontend, test-backend, scan-frontend, scan-backend]
           filters:
             branches:
               only: [master]
