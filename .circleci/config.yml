@@ -32,7 +32,7 @@ commands:
           name: Revert migrations
           when: on_fail
           command: |
-            migrations=$(curl -H "token: 5cbbb2a1-6429-4852-b92e-7be22348c7ab" --request GET https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7})
+            migrations=$(curl -H "token: b7150f05-66ad-4c58-b8e2-898952e095b3" --request GET https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7})
             if(( migrations==1 )); 
             then
               cd ~/project/backend   
@@ -168,7 +168,7 @@ jobs:
               --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --output text)   
 
-            curl -H "Content-Type: text/plain" -H "token: 9e34f4d1-eb3b-4f00-89c6-ddbef6ff9a14" --request PUT --data ""http://$BACKEND_IP:3030"" https://api.memstash.io/values/BACKEND_URL           
+            curl -H "Content-Type: text/plain" -H "token: e17bcf38-2ad2-4885-be7e-d21773c4da01" --request PUT --data ""http://$BACKEND_IP:3030"" https://api.memstash.io/values/BACKEND_URL           
                
       - run:
           name: Ensure front-end infrastructure exist
@@ -241,10 +241,10 @@ jobs:
             if grep -q "has been executed successfully" migration_status
             then
               echo "DB migration was successful, will update memstash..."
-              curl -H "Content-Type: text/plain" -H "token: 5cbbb2a1-6429-4852-b92e-7be22348c7ab" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
+              curl -H "Content-Type: text/plain" -H "token: b7150f05-66ad-4c58-b8e2-898952e095b3" --request PUT --data "success" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             else
               echo "DB migration failed, please verify setup! Probably the database already exists. Verify setup!"
-              curl -H "Content-Type: text/plain" -H "token: acb3ce0c-ef3a-4cf6-9182-b32390ad96a8" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
+              curl -H "Content-Type: text/plain" -H "token: c70a184b-70f5-4068-810c-6367927c625c" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
             fi
             echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
       - destroy-environment
@@ -254,8 +254,8 @@ jobs:
     executor: node
     steps:
       - checkout
-     # - restore_cache:
-      #    keys: [v4-frontendCache]
+      - restore_cache:
+          keys: [v4-frontendCache]
       - attach_workspace:
           at: ~/
       - run:
