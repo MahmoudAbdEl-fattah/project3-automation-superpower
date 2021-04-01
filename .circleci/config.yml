@@ -311,14 +311,6 @@ jobs:
             cd /home
             tar czf backend.tar.gz -P /home/circleci/project/backend
       - run:
-          name: backend server
-          no_output_timeout: 30m
-          command: |   
-            ls -al && pwd
-            cat inventory.txt
-            cd .circleci/ansible/
-            ansible-playbook -i inventory.txt deploy-backend.yml
-      - run:
           name: Deploy backend
           working_directory: ./.circleci/ansible
           command: |
