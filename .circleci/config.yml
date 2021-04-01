@@ -437,8 +437,7 @@ jobs:
               then
                 aws cloudformation delete-stack --stack-name "proj3-frontend-${OldWorkflowID}"
               fi
-            fi
-            
+            fi  
 workflows:
   default:
     jobs:
