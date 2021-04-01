@@ -188,35 +188,30 @@ jobs:
       - aws-cli/setup      
       - run: yum -y install tar gzip
       - run:
-          name: blue environment cloudfront stack
-          command: |    
-            aws cloudformation deploy --stack-name proj3-cloudfront-kk1j99dhjppmz1999 --template-file .circleci/files/cloudfront.yml --region us-east-1 --parameter-overrides WorkflowID=kk1j99dhjppmz1999
-      - run:
           name: Ensure back-end infrastructure exists
           command: |
-            aws cloudformation deploy --stack-name proj3-cloudfront-kk1j99dhjppmz1999 --template-file .circleci/files/cloudfront.yml --region us-east-1 --parameter-overrides WorkflowID=kk1j99dhjppmz1999
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
-              --stack-name "proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}
+              --tags project=proj3-backend-${CIRCLE_WORKFLOW_ID} \
+              --stack-name proj3-backend-${CIRCLE_WORKFLOW_ID} \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID}"
       - run:
-          name: Save backend URL in memstash to reuse it in frontend deploying - go to MemStash.io, add key= BACKEND_IP, value= http://$BACKEND_IP:3030
+          name: Fetch and Save Backend URL
           command: |
             BACKEND_IP=$(aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID}" \
+              --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID}" \
               --output text)
             echo $BACKEND_IP
-            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "http://$BACKEND_IP:3030" https://api.memstash.io/values/BACKEND_URL       
+            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "http://$BACKEND_IP:3030" https://api.memstash.io/values/BACKEND_URL
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
-              --stack-name "proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}
+              --tags project=proj3-frontend-${CIRCLE_WORKFLOW_ID} \
+              --stack-name proj3-frontend-${CIRCLE_WORKFLOW_ID} \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID}"
       - run:
           name: Add back-end ip to ansible inventory
           working_directory: ./.circleci/ansible
@@ -320,14 +315,15 @@ jobs:
             npm install oauth2
             npm install webpack
             npm run build
-            # check the following s3 dest.
             aws s3 cp ./dist "s3://proj3-${CIRCLE_WORKFLOW_ID}" --recursive
       - persist_to_workspace:
           root: .
           paths:
             - frontend/dist
-      - destroy-environment
-      - revert-migrations
+      
+
+#- destroy-environment
+ #     - revert-migrations
 
   deploy-backend:
     executor: python
@@ -363,8 +359,8 @@ jobs:
           when: on_fail
           command: |
             apk add --update py3-pip && pip3 install --upgrade pip && pip3 install awscli
-      - destroy-environment
-      - revert-migrations
+      #- destroy-environment
+      #- revert-migrations
 
   smoke-test:
     executor: python
@@ -406,8 +402,7 @@ jobs:
             else
               exit 1
             fi
-      - destroy-environment
-      - revert-migrations
+
   cloudfront-update:
     docker:
       - image: amazon/aws-cli
