@@ -59,37 +59,51 @@ jobs:
       # Checkout code from git
       - checkout
       - restore_cache:
-          keys: [v4-frontendCache]
+          keys: [v5-frontendCache]
       - run:
-          name: Build frontend
+          name: Install dependencies
           command: |
             cd frontend
-            sudo npm install webpack-dev-server -g
-            sudo npm install
-            sudo npm run build
+            npm install
+            npm install oauth-sign
+      - run:
+          name: Compile the code
+          command: |
+            cd frontend
+            npm run build
       - save_cache:
           paths: [frontend/node_modules]
-          key: v4-frontendCache  
-
+          key: v5-frontendCache
 
   build-backend:
     executor: node
     steps:
       - checkout
       - restore_cache:
-          keys: [v4-backend-build]
+          keys: [v5-backend-build]
       - run:
-          name: Backend build
+          name: Install dependencies
           command: |
             cd backend
-            npm i
+            npm install
+      - persist_to_workspace:
+          root: .
+          paths: [backend/node_modules]
+      - run:
+          name: Compile the code
+          command: |
+            cd backend
             npm run build
+      - persist_to_workspace:
+          root: .
+          paths: [v4-backend/dist]
       - save_cache:
           paths: [backend/node_modules]
-          key: v4-backend-build  
+          key: v5-backend-build
       - save_cache:
           paths: [backend/dist]
           key: v4-backend-dist  
+
 
           
   test-frontend:
@@ -97,10 +111,15 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v4-frontendCache"]  
+          keys: ["v5-frontendCache"]
       - run:
-          name: Fontend test
-          no_output_timeout: 30m          
+          name: Install Frontend deps
+          command: |
+            cd frontend
+            npm install
+            npm install oauth-sign
+      - run:
+          name: Test code
           command: |
             cd frontend
             npm run test
@@ -110,9 +129,14 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v4-backend-build"]  
+          keys: [v5-backend-build]
       - run:
-          name: Backend test
+          name: Install Backend deps
+          command: |
+            cd backend
+            npm install
+      - run:
+          name: Test code
           command: |
             cd backend
             npm run test
@@ -126,25 +150,35 @@ jobs:
     steps:
       - checkout
       - restore_cache:
-          keys: ["v4-frontendCache"]  
+          keys: ["v5-frontendCache"]
       - run:
-          name: frontend scan
+          name: Install Frontend deps
           command: |
             cd frontend
-            npm audit --audit-level=critical
+            npm install
+            npm install oauth-sign
+      - run:
+          name: Scan Frontend
+          command: |
+            cd frontend
+            npm audit fix --audit-level=critical --force
  
   scan-backend:
     executor: node
     steps:
       - checkout
       - restore_cache:
-          keys: ["v4-backend-build"]  
+          keys: [v5-backend-build]
       - run:
-          name: Backend scan
+          name: Install Backend deps
           command: |
             cd backend
             npm install
-            npm audit --audit-level=critical          
+      - run:
+          name: Scan Backend
+          command: |
+            cd backend
+            npm audit fix --audit-level=critical --force         
 
   create-infrastructure:
     docker:
@@ -154,6 +188,10 @@ jobs:
       - aws-cli/setup      
       - run: yum -y install tar gzip
       - run:
+          name: blue environment cloudfront stack
+          command: |    
+            aws cloudformation deploy --stack-name proj3-cloudfront-kk1j99dhjppmz1999 --template-file .circleci/files/cloudfront.yml --region us-east-1 --parameter-overrides WorkflowID=kk1j99dhjppmz1999
+      - run:
           name: Ensure back-end infrastructure exists
           command: |
             aws cloudformation deploy --stack-name proj3-cloudfront-kk1j99dhjppmz1999 --template-file .circleci/files/cloudfront.yml --region us-east-1 --parameter-overrides WorkflowID=kk1j99dhjppmz1999
@@ -161,17 +199,16 @@ jobs:
               --template-file .circleci/files/backend.yml \
               --stack-name "proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=proj3
+              --tags project=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Save backend URL in memstash to reuse it in frontend deploying - go to MemStash.io, add key= BACKEND_IP, value= http://$BACKEND_IP:3030
           command: |
             BACKEND_IP=$(aws ec2 describe-instances \
               --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --output text)   
+              --filters "Name=tag:project,Values=udapeople-backend-${CIRCLE_WORKFLOW_ID}" \
+              --output text)
             echo $BACKEND_IP
-            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "http://$BACKEND_IP:3030" https://api.memstash.io/values/BACKEND_URL
-       
+            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "http://$BACKEND_IP:3030" https://api.memstash.io/values/BACKEND_URL       
       - run:
           name: Ensure front-end infrastructure exist
           command: |
@@ -179,15 +216,16 @@ jobs:
               --template-file .circleci/files/frontend.yml \
               --stack-name "proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}" \
-              --tags project=proj3
+              --tags project=proj3-frontend-${CIRCLE_WORKFLOW_ID:0:7}
       - run:
           name: Add back-end ip to ansible inventory
+          working_directory: ./.circleci/ansible
           command: |
             aws ec2 describe-instances \
-              --query 'Reservations[*].Instances[*].PublicIpAddress' \
-              --filters "Name=tag:project,Values=proj3" \
-              --output text >> .circleci/ansible/inventory.txt
-            cat .circleci/ansible/inventory.txt
+                 --query 'Reservations[*].Instances[*].PublicIpAddress' \
+                 --filters "Name=tag:project,Values=proj3-backend-${CIRCLE_WORKFLOW_ID}" \
+                 --output text > inventory.txt
+            cat inventory.txt
       - persist_to_workspace:
           root: .
           paths:
@@ -195,14 +233,13 @@ jobs:
       - destroy-environment
                  
   configure-infrastructure:
-    docker:
-      - image: python:3.7-alpine3.11
+    executor: python
     steps:
       - checkout
       - add_ssh_keys:
           fingerprints: ["cd:d9:ea:e3:5e:a7:56:05:40:f2:8f:f9:a2:49:64:94"]
       - attach_workspace:
-          at: ~/
+          at: .
       - run:
           name: Install dependencies
           working_directory: ./.circleci/ansible
@@ -211,9 +248,8 @@ jobs:
             pip install awscli
       - run:
           name: Configure server
-          no_output_timeout: 30m
-          command: |      
-            cd .circleci/ansible/
+          working_directory: ./.circleci/ansible
+          command: |
             ansible-playbook -i inventory.txt configure-server.yml
       - destroy-environment
 
@@ -221,20 +257,22 @@ jobs:
     executor: node
     steps:
       - checkout
-      - restore_cache:
-          keys: ["v4-backend-build"]          
-      - run:
-          name: awscli install
-          command: |
-            sudo apt-get -y -qq update
-            sudo apt-get -y -qq install python3
-            sudo apt-get -qq install awscli
+      #- restore_cache:
+       #   keys: ["v5-backend-build"]   
+      - attach_workspace:
+          at: .                 
+      #- run:
+       #   name: awscli install
+        #  command: |
+         #   sudo apt-get -y -qq update
+          #  sudo apt-get -y -qq install python3
+           # sudo apt-get -qq install awscli
       - run:
           name: Run migrations
+          working_directory: ./backend
           command: |
-            cd backend
             npm install
-            npm run build
+            #npm run build
             npm run migrations > migration_status
       - run:
           name: Send migration results to memstash
@@ -246,7 +284,7 @@ jobs:
               curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "MIGRATION_OK" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
             else
               echo "DB migration failed, please verify setup! Probably the database already exists. Verify setup!"
-              curl -H "Content-Type: text/plain" -H "token: c70a184b-70f5-4068-810c-6367927c625c" --request PUT --data "failure" https://api.memstash.io/values/DB_MIGRATION_${CIRCLE_WORKFLOW_ID:0:7}
+              curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "MIGRATION_FAILED" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
             fi
             echo "WorkflowID=${CIRCLE_WORKFLOW_ID:0:7}"     
       - destroy-environment
@@ -256,10 +294,10 @@ jobs:
     executor: node
     steps:
       - checkout
-      - restore_cache:
-          keys: [v4-frontendCache]
+      #- restore_cache:
+       #   keys: [v5-frontendCache]
       - attach_workspace:
-          at: ~/
+          at: .
       - run:
           name: Install AWS CLI dependencies
           command: |
@@ -282,6 +320,7 @@ jobs:
             npm install oauth2
             npm install webpack
             npm run build
+            # check the following s3 dest.
             aws s3 cp ./dist "s3://proj3-${CIRCLE_WORKFLOW_ID}" --recursive
       - persist_to_workspace:
           root: .
@@ -305,7 +344,7 @@ jobs:
             apk add --update ansible curl rsync openssh nodejs npm tar gzip
             pip install awscli
       - restore_cache:
-          keys: ["backend-dist", "backend-build"]
+          keys: ["v5-backend-dist", "v5-backend-build"]
       - run:
           name: Compress dist Files
           command: |
