@@ -156,6 +156,7 @@ jobs:
       - run:
           name: Ensure back-end infrastructure exists
           command: |
+            aws cloudformation deploy --stack-name proj3-cloudfront-kk1j99dhjppmz1999 --template-file .circleci/files/cloudfront.yml --region us-east-1 --parameter-overrides WorkflowID=kk1j99dhjppmz1999
             aws cloudformation deploy \
               --template-file .circleci/files/backend.yml \
               --stack-name "proj3-backend-${CIRCLE_WORKFLOW_ID:0:7}" \

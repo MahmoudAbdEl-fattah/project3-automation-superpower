@@ -32,5 +32,4 @@
     - setup:
 
   roles:
-    - configure-server
     - deploy
